@@ -1,41 +1,60 @@
-# Cursor Projects Menu
+# IDE Projects Menu
 
-A lightweight launcher to quickly open recent Cursor IDE projects using a dmenu-style menu.
+A lightweight launcher to quickly open recent IDE projects (Cursor, VS Code, VS Code OSS, VSCodium & Zed) using a dmenu-style menu.
 
 ## Features
 
-- Lists all your Cursor workspaces sorted by **most recently used**
+- Lists all your IDE workspaces sorted by **most recently used**
+- Supports multiple editors: **Cursor**, **VS Code**, **VS Code OSS**, **VSCodium**  and **ZED**
+- Tabbed interface to filter by IDE
+- Shows which editor each project belongs to when viewing all projects
 - Fuzzy search through project names
-- One-click launch into Cursor
+- One-click launch into the appropriate editor
 
 ## Requirements
 
 - [Node.js](https://nodejs.org/)
 - [Walker](https://github.com/abenz1267/walker) (or any dmenu-compatible launcher)
-- [Cursor](https://cursor.sh/)
+- At least one of: [Cursor](https://cursor.sh/), [VS Code](https://code.visualstudio.com/), [VS Code OSS](https://github.com/microsoft/vscode), or [VSCodium](https://vscodium.com/)
 
 ## Installation
 
-To install the script run:
-
 ```bash
-git clone https://github.com/Airbus6804/Omarchy-Cursor-Projects-Menu.git 
-cd ./Omarchy-Cursor-Projects-Menu
-npm i
-chmod +x ./cursor-projects-menu.sh
-mkdir ~/.config/hypr/scripts
-cd ..
-mv Omarchy-Cursor-Projects-Menu ~/.config/hypr/scripts/Omarchy-Cursor-Projects-Menu
+mkdir -p ~/.config/hypr/scripts && \
+git clone https://github.com/tomkyriacou64/Omarchy-Code-Projects-Menu.git ~/.config/hypr/scripts/Omarchy-Code-Projects-Menu && \
+cd ~/.config/hypr/scripts/Omarchy-Code-Projects-Menu && \
+npm i && \
+chmod +x ./projects-menu.sh
 ```
-Add the bind in your config
+
+Add binds in your config:
 
 ```
-bindd = SUPER SHIFT, C, Cursor History, exec, ~/.config/hypr/scripts/Omarchy-Cursor-Projects-Menu/cursor-projects-menu.sh
+# All IDE projects (shows tabbed interface)
+bindd = SUPER SHIFT, P, IDE Projects, exec, ~/.config/hypr/scripts/Omarchy-Code-Projects-Menu/projects-menu.sh
+
+# Direct filter by editor
+bindd = SUPER SHIFT, C, Cursor Projects, exec, ~/.config/hypr/scripts/Omarchy-Code-Projects-Menu/projects-menu.sh cursor
+bindd = SUPER SHIFT, V, VS Code Projects, exec, ~/.config/hypr/scripts/Omarchy-Code-Projects-Menu/projects-menu.sh code
+```
+
+## Usage
+
+### Show tabbed interface (select IDE first)
+```bash
+./projects-menu.sh
+```
+
+### Filter by specific editor
+```bash
+./projects-menu.sh cursor    # Cursor only
+./projects-menu.sh code       # VS Code only
+./projects-menu.sh codium     # VSCodium only
 ```
 
 ## How It Works
 
-1. `index.js` reads Cursor's workspace storage at `~/.config/Cursor/User/workspaceStorage/`
+1. `index.js` reads workspace storage from all supported editors
 2. Extracts project paths and sorts them by modification time (newest first)
-3. `cursor-projects-menu.sh` pipes the list to Walker for selection
-4. Opens the selected project in Cursor
+3. `projects-menu.sh` shows a tabbed interface to select IDE, then lists projects
+4. Opens the selected project in the appropriate editor (automatically detected)

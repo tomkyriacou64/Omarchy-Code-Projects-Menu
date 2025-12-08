@@ -1,34 +1,104 @@
 import fs from 'fs';
 import { stdout } from 'process';
+import { execSync } from 'child_process';
+import { getCodiumWorkspaces } from './editors/codium.js';
+import { isZedInstalled, getZedWorkspaces } from './editors/zed.js';
 
-const workspacesPath = `${process.env.HOME}/.config/Cursor/User/workspaceStorage/`;
+const editors = [
+    {
+        name: 'Cursor',
+        configPath: `${process.env.HOME}/.config/Cursor/User/workspaceStorage/`,
+        command: 'cursor',
+        isInstalled: (path) => fs.existsSync(path),
+        getWorkspaces: (name, path, cmd) => getCodiumWorkspaces(name, path, cmd)
+    },
+    {
+        name: 'VS Code',
+        configPath: `${process.env.HOME}/.config/Code/User/workspaceStorage/`,
+        command: 'code',
+        isInstalled: (path) => fs.existsSync(path),
+        getWorkspaces: (name, path, cmd) => getCodiumWorkspaces(name, path, cmd)
+    },
+    {
+        name: 'VS Code OSS',
+        configPath: `${process.env.HOME}/.config/Code - OSS/User/workspaceStorage/`,
+        command: 'code',
+        isInstalled: (path) => fs.existsSync(path),
+        getWorkspaces: (name, path, cmd) => getCodiumWorkspaces(name, path, cmd)
+    },
+    {
+        name: 'VSCodium',
+        configPath: `${process.env.HOME}/.config/VSCodium/User/workspaceStorage/`,
+        command: 'codium',
+        isInstalled: (path) => fs.existsSync(path),
+        getWorkspaces: (name, path, cmd) => getCodiumWorkspaces(name, path, cmd)
+    },
+    {
+        name: 'Zed',
+        configPath: `${process.env.HOME}/.local/share/zed/db`,
+        command: 'zeditor',
+        isInstalled: (path) => isZedInstalled(path),
+        getWorkspaces: (name, path, cmd) => getZedWorkspaces(path)
+    }
+];
 
-const folders = fs.readdirSync(workspacesPath);
+const mode = process.argv[2];
+const editorFilter = mode === 'list' ? process.argv[3]?.toLowerCase() : mode?.toLowerCase();
 
-const lines = folders
-    .map(workspace => {
-        const folderPath = `${workspacesPath}${workspace}/workspace.json`;
+function hasCommand(cmd) {
+    try {
+        execSync(`command -v ${cmd}`, { stdio: 'ignore' });
+        return true;
+    } catch {
+        return false;
+    }
+}
 
-        try {
-            const { folder: folderProtocol } = JSON.parse(fs.readFileSync(folderPath, 'utf8'));
-            
-            if (!folderProtocol) return null;
+function getInstalledEditors() {
+    return editors.filter(editor => {
+        if (!hasCommand(editor.command)) return false;
+        return editor.isInstalled(editor.configPath);
+    });
+}
 
-            const folder = folderProtocol.replace('file://', '');
-            const name = folder.split('/').at(-1);
+function getWorkspaces(editor) {
+    return editor.getWorkspaces(editor.name, editor.configPath, editor.command);
+}
 
-            return `${name}|${folder}|${new Date(fs.statSync(`${workspacesPath}${workspace}`).mtime).toISOString()}`;
-        } catch {
-            return null;
-        }
+if (mode === 'tabs') {
+    const installed = getInstalledEditors();
+    const editorWorkspaces = installed.map(editor => ({
+        name: editor.name,
+        workspaces: getWorkspaces(editor)
+    }));
+    
+    const allCount = editorWorkspaces.reduce((sum, { workspaces }) => sum + workspaces.length, 0);
+    const available = editorWorkspaces.map(({ name, workspaces }) => 
+        `${name} (${workspaces.length})|${name}`
+    );
+
+    stdout.write(`All (${allCount})|all\n${available.join('\n')}`);
+    process.exit(0);
+}
+
+const installed = getInstalledEditors();
+const workspaces = installed
+    .filter(e => {
+        if (!editorFilter || editorFilter === 'all') return true;
+        const f = editorFilter.toLowerCase();
+        return e.name.toLowerCase().includes(f) || e.command.toLowerCase().includes(f);
     })
+    .flatMap(getWorkspaces)
     .sort((a, b) => {
-        const aDate = new Date(a.split('|')[2]);
-        const bDate = new Date(b.split('|')[2]);
-        return bDate.getTime() - aDate.getTime();
+        const [, , aTime] = a.split('|');
+        const [, , bTime] = b.split('|');
+        return new Date(bTime) - new Date(aTime);
     })
-    .map(line => line.split('|').filter((_,index) => index < 2).join('|'))
-    .filter(Boolean);
+    .map(line => {
+        const [name, folder, , editor, cmd] = line.split('|');
+        const showEditor = editorFilter === 'all' ? ` (${editor})` : '';
+        return `${name}${showEditor}|${folder}|${editor}|${cmd}`;
+    });
 
-stdout.write(lines.join('\n'));
+stdout.write(workspaces.join('\n'));
 
