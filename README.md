@@ -58,3 +58,7 @@ bindd = SUPER SHIFT, V, VS Code Projects, exec, ~/.config/hypr/scripts/Omarchy-C
 2. Extracts project paths and sorts them by modification time (newest first)
 3. `projects-menu.sh` shows a tabbed interface to select IDE, then lists projects
 4. Opens the selected project in the appropriate editor (automatically detected)
+
+## Credits
+
+This project is a fork of [Omarchy-Cursor-Projects-Menu](https://github.com/Airbus6804/Omarchy-Cursor-Projects-Menu) by [Airbus6804](https://github.com/Airbus6804), extended to support multiple IDEs.
