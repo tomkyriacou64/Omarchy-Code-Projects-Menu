@@ -149,6 +149,10 @@ get_projects() {
         }'
 }
 
+# Source project creation functionality
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/create-project.sh"
+
 if [[ -z "$EDITOR_FILTER" ]]; then
     tabs=$(get_tabs)
     tab_count=$(echo "$tabs" | wc -l)
@@ -166,10 +170,6 @@ if [[ -z "$EDITOR_FILTER" ]]; then
 fi
 
 projects=$(get_projects "$EDITOR_FILTER")
-if [[ -z "$projects" ]]; then
-    echo "No projects found." >&2
-    exit 0
-fi
 
 case "$EDITOR_FILTER" in
     all|"") prompt="All Projects…" ;;
@@ -180,8 +180,26 @@ case "$EDITOR_FILTER" in
     *) prompt="Projects…" ;;
 esac
 
-selected=$(echo "$projects" | cut -d'|' -f1 | walker --dmenu -p "$prompt")
+# Add "Create New Project" option at the top
+project_list="➕ Create New Project"
+if [[ -n "$projects" ]]; then
+    project_list="${project_list}"$'\n'"$(echo "$projects" | cut -d'|' -f1)"
+fi
+
+selected=$(echo "$project_list" | walker --dmenu -p "$prompt")
 [[ -z "$selected" ]] && exit 0
+
+# Check if "Create New Project" was selected
+if [[ "$selected" == "➕ Create New Project" ]]; then
+    create_new_project "$EDITOR_FILTER" "$projects"
+    exit 0
+fi
+
+# Handle existing project selection
+if [[ -z "$projects" ]]; then
+    echo "No projects found." >&2
+    exit 0
+fi
 
 project_line=$(echo "$projects" | awk -F'|' -v sel="$selected" '$1 == sel')
 [[ -z "$project_line" ]] && exit 0
